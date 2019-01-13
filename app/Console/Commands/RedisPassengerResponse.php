@@ -10,21 +10,21 @@ use App\Driver;
 use App\Jobs\TransactionProcessor;
 use App\Jobs\PassengerTimeoutJob;
 
-class RedisSubscribe extends Command
+class RedisPassengerResponse extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'redis:subscribe';
+    protected $signature = 'redis:passenger';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Subscription to redis account';
+    protected $description = 'Command description';
 
     /**
      * Create a new command instance.
@@ -43,30 +43,27 @@ class RedisSubscribe extends Command
      */
     public function handle()
     {
-        //handle the driver response
-        //message: {response: 0/1, transcation: id, driver:id}
-        Redis::subscribe(['driverResponse'], function($message) {
+        Redis::subscribe(['passengerResponse'], function($message) {
             $data = json_decode($message, true);
-            print_r("Driver Response");
+            print_r("Passenger Response");
             print_r($data);
-            $transcation = Transcation::find($data['transcation']);
-            $driver = Driver::find($data['driver']);
-
             if($data['response'] == 1) {
-                // update the status of the driver    
-                $transcation->status = 102;
-                $transcation->save();
-                PassengerTimeoutJob::dispatch($transcation, $driver)->delay(now()->addMinutes(5));
+                // update the status of the driver and transaction
+                $transcation = Transcation::find($data['transcation']);
+                if($transcation->status != 400) {
+                    $transcation->status = 200;
+                    $transcation->driver_id = $data['driver'];
+                    $transcation->save();
+                }
             } else {
-                // restore the driver states
-                $driver->status = 0;
+                // restore the driver status
+                $driver = Driver::find($data['driver']);
+                $driver->occupied = 0;
                 $driver->transcation_id = 0;
                 $driver->save();
-
-                $transcation->status = 100;
-                $transcation->save();
                 
                 //Resume the searching process again
+                $transcation = Transcation::find($data['transcation']);
                 TransactionProcessor::dispatch($transcation);
             }
         });

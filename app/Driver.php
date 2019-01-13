@@ -26,7 +26,7 @@ class Driver extends Authenticatable implements JWTSubject
         return $this->belongsTo(Taxi::class, "taxi_id");
     }
 
-    public function transaction() {
+    public function transcation() {
         return $this->hasMany(Transcation::class);
     }
 

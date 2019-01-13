@@ -28,9 +28,11 @@ Route::post('drvier/verifyPassoword', 'DriverController@verifyPassword');
 
 Route::post('transcation/startTranscation', 'TranscationController@startTranscation');
 Route::post('transcation/searchForRecentTranscation', 'TranscationController@searchForRecentTranscation');
+Route::post('transcation/cancelOrder', 'TranscationController@cancelOrder');
 
 Route::post('taxi/checkDuplicate', 'TaxiController@checkDuplicate');
 Route::post('taxi/register', 'TaxiController@register');
 Route::post('taxi/signIn', 'TaxiController@signIn');
 Route::post('taxi/deleteAccount', 'TaxiController@deleteTaxiAccount');
 Route::post('taxi/checkOwnerTaxi', 'TaxiController@findOwnedTaxi');
+Route::post('taxi/signInQRCode', 'TaxiController@signInQRCode');

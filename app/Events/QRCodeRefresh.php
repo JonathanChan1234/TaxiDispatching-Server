@@ -10,18 +10,23 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 
-class News
+use App\Taxi;
+
+class QRCodeRefresh implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public $platenumber, $accessToken;
 
     /**
      * Create a new event instance.
      *
      * @return void
      */
-    public function __construct()
+    public function __construct(Taxi $taxi)
     {
-        //
+        $this->platenumber = $taxi->plateNumber;
+        $this->accessToken = $taxi->accessToken;
     }
 
     /**
@@ -31,6 +36,6 @@ class News
      */
     public function broadcastOn()
     {
-        return new PrivateChannel('channel-name');
+        return new Channel('qrcodeRefresh');
     }
 }

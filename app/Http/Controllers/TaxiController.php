@@ -7,6 +7,7 @@ use App\Driver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Resources\TaxiResource;
+use Illuminate\Database\Eloquent\ModelNotFoundException;  
 
 class TaxiController extends Controller
 {
@@ -56,16 +57,18 @@ class TaxiController extends Controller
                 'success' => 0,
                 'message' => "Taxi not found"]);
         }
-        //If the password is correct and it is not signed by anyone
-        if(password_verify($request->password, $taxi->password) && $taxi->occupied == 0) {
+        //If the access token is correct and it is not signed by anyone
+        if($request->accessToken == $taki->accessToken && $taxi->occupied == 0) {
             //Update the status of the taxi account
-            $taxi->last_login_time = $request->time;
+            $currentTime = new DateTime('now');
+            $currentTime->setTimezone(new DateTimeZone('Asia/Hong_Kong'));
+            $taxi->last_login_time = $currentTime->format('Y-m-d H:i:s');
             $taxi->occupied = 1;
             $taxi->driver_id = $request->id;
             $taxi->save();
             // Update the status of the driver
             $driver = Driver::find($request->id);
-            $driver->occupied = 0;
+            $driver->occupied = 1;
             $driver->taxi_id = $taxi->id;
             $driver->save();
             return response()->json([
@@ -74,7 +77,7 @@ class TaxiController extends Controller
         } else if($taxi->occupied == 1) {   // The taxi is currently signed in by someone
             return response()->json([
                 'success' => 0,
-                'message' => "This taxi is alreay signed up by others"]);
+                'message' => "This taxi is already signed up by others"]);
         }
         return response()->json([
             'success' => 0,
@@ -91,9 +94,6 @@ class TaxiController extends Controller
             return response()->json([
                 'owned_taxis' => []]);
         }
-        // return response()-> json([
-        //     'owned_taxis' => $taxi_collection
-        // ]);
         return response()-> json([
             'owned_taxis' => TaxiResource::collection($taxi_collection)
         ]);
@@ -108,13 +108,35 @@ class TaxiController extends Controller
         } catch(ModelNotFoundException $e) {
             return response()->json([
                 'success' => 0,
-                'error' => "Taxi not found"]);
+                'message' => "Taxi not found"]);
         }
         if(password_verify($request->password, $taxi->password)) {
             $taxi->delete();
             return response()->json([
                 'success' => 1,
-                'error' => "Taxi account has been removed"]);
+                'message' => "Taxi account has been removed"]);
+        }
+    }
+
+    /**
+     * Sign In (Taxi QR Code Generator)
+     */
+    public function signInQRCode(Request $request) {
+        try {
+            $taxi = Taxi::where('platenumber', '=', $request->account)->firstorFail();
+        } catch(ModelNotFoundException $e) {
+            return response()->json([
+                'success' => 0,
+                'message' => "Taxi not found"]);
+        }
+        if(password_verify($request->password, $taxi->password)) {
+            return response()->json([
+                'success' => 1,
+                'message' => "Success"]);
+        } else {
+            return response()->json([
+                'success' => 0,
+                'message' => "Incorrect Password"]);
         }
     }
 }

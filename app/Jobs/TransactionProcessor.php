@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Support\Facades\Redis;
 
+use App\Jobs\ResumeDriverStatus;
 use App\Events\DriverFoundEvent;
 use App\Transcation;
 use App\Driver;
@@ -40,50 +41,70 @@ class TransactionProcessor implements ShouldQueue
      */
     public function handle()
     {
-        //Retrieve all the available drivers
-        $drivers = Driver::where('occupied', 0)->get();
-        // Iterate every available drivers
-        $drivers->each(function ($item, $key) {
-            if(Redis::hexists($item->id, "latitude")) {
-                // Retrieve the location data and timestamp from Redis
-                $location = Redis::hgetall($item->id);
-                $latitude = Redis::hget($item->id, "latitude");
-                $longitude = Redis::hget($item->id, "longitude");
-                $locationTime = Redis::hget($item->id, "timestamp");
-                
-                // compare timestamp (Check whether the location is "outdated")
-                $currentTime = new DateTime('now');
-                $currentTime->setTimezone(new DateTimeZone('Asia/Hong_Kong'));
-                $locationTime = new DateTime($locationTime);
-                $interval = $currentTime->diff($locationTime);
-                
-                // Testing
-                event(new DriverFoundEvent($item, $this->transcation));
-
-                //location is valid within 3 minutes
-                if($interval->i == 3
-                && $interval->h == 0
-                && $interval->d == 0
-                && $interval->m == 0
-                && $interval->y == 0) {
-                    //Calculate distance between two points
+        //If the status is 400 (cancel)
+        if($this->transcation->id != 400) {
+            Log::Info("Handle transaction ". $this->transcation->id);
+            //Retrieve all the available drivers (which they have logged in a taxi account)
+            $drivers = Driver::where([['occupied', 0], ['taxi_id', '=', '0']])->get();
+            // Iterate every available drivers
+            $drivers->each(function ($item, $key) {
+                if(Redis::hexists($item->id, "latitude")) {
+                    // Retrieve the location data and timestamp from Redis
+                    $location = Redis::hgetall($item->id);
+                    $latitude = Redis::hget($item->id, "latitude");
+                    $longitude = Redis::hget($item->id, "longitude");
+                    $locationTime = Redis::hget($item->id, "timestamp");
+                    
+                    // compare timestamp (Check whether the location is "outdated")
+                    $currentTime = new DateTime('now');
+                    $currentTime->setTimezone(new DateTimeZone('Asia/Hong_Kong'));
+                    $locationTime = new DateTime($locationTime);
+                    $interval = $currentTime->diff($locationTime);
+    
+                    // test without timestamp
                     $distance = $this->getDistance($latitude, $longitude, $this->transcation->start_lat, $this->transcation->start_long);
-
+                    echo 'Distance: '.$distance;
                     // eligible drivers (distance between driver and pick up point is less than 3 km)
-                    if($distance < 3) {
+                    if($distance < 5) {
                         // Update the status of the selected driver
                         $item->occupied = 1;
-                        $item->transcation_id = $transcation->id;
-
+                        $item->transcation_id = $this->transcation->id;
                         $eligible_drivers = $item;
-                        //Fire the DriverFoundEvent to the passengers
-                        // event(new DriverFoundEvent($item));
-                        //Fire the PassengerFoundEvent to the drivers
-                        // event(new PassengerFoundEvent($item));
+                        $item->save();
+    
+                        //Update the status of the transaction
+                        $this->transcation->status = 101;
+                        $jobId = $this->job->getJobId();
+                        $this->transcation->save();
+                        
+                        Log::Info("Selected driver id:  ". $item->id);
+                        
+                        // start timer for the response (5 mins)
+                        ResumeDriverStatus::dispatch($this->transcation, $item)->delay(now()->addMinutes(5));
+                        event(new DriverFoundEvent($item, $this->transcation));
+                        return false; //break the loop
                     }
+                    //location is valid within 3 minutes
+                    // if($interval->i == 3
+                    // && $interval->h == 0
+                    // && $interval->d == 0
+                    // && $interval->m == 0
+                    // && $interval->y == 0) {
+                    //     //Calculate distance between two points
+                    //     $distance = $this->getDistance($latitude, $longitude, $this->transcation->start_lat, $this->transcation->start_long);
+                    //     echo 'Distance: '.$distance;
+                    //     // eligible drivers (distance between driver and pick up point is less than 3 km)
+                    //     if($distance < 5) {
+                    //         // Update the status of the selected driver
+                    //         $item->occupied = 1;
+                    //         $item->transcation_id = $transcation->id;
+                    //         $eligible_drivers = $item;
+                    //         event(new DriverFoundEvent($item, $this->transcation));
+                    //     }
+                    // }
                 }
-            }
-        });
+            });
+        }
     }
 
     function getDistance($latitude1, $longitude1, $latitude2, $longitude2) {  

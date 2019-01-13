@@ -14,8 +14,8 @@ class TranscationController extends Controller
 {
     public function __construct()
     {
-      $this->middleware('auth:api')->except(['startTranscation', 'searchForRecentTranscation']);
-      $this->middleware('auth:driver-api')->except(['startTranscation', 'searchForRecentTranscation']);
+      $this->middleware('auth:api')->except(['startTranscation', 'searchForRecentTranscation', 'cancelOrder']);
+      $this->middleware('auth:driver-api')->except(['startTranscation', 'searchForRecentTranscation', 'cancelOrder']);
     }
 
     public function startTranscation(Request $request) {
@@ -46,5 +46,28 @@ class TranscationController extends Controller
             'message' => "There is no ongoing transaction"], 400);
       }
       return new TranscationResource($transcation);
+    }
+
+    public function cancelOrder(Request $request) {
+      try {
+        $transcation = Transcation::find($request->id);
+      } catch(ModelNotFoundException $e) {
+        return response()->json([
+          'success' => 0,
+          'message' => "Model not found error"
+        ]);
+      }
+      if($transcation != null) {
+        $transcation->status = 400;
+        $transcation->save();
+        return response()->json([
+          'success' => 1,
+          'message' => "Cancel successfully"
+        ]);
+      }
+      return response()->json([
+      'success' => 0,
+      'message' => "Model not found error"
+      ]);
     }
 }

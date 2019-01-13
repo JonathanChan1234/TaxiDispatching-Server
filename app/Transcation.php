@@ -27,18 +27,18 @@ class Transcation extends Model
     }
 
     public function driver() {
-        return $this->belongsTo(Driver::class);
+        return $this->belongsTo(Driver::class, "driver_id");
     }
 
-    public function first_driver() {
-        return $this->belongsTo(Driver::class, 'first_driver_id');
-    }
+    // public function first_driver() {
+    //     return $this->belongsTo(Driver::class, 'first_driver_id');
+    // }
 
-    public function second_driver() {
-        return $this->belongsTo(Driver::class, 'second_driver_id');
-    }
+    // public function second_driver() {
+    //     return $this->belongsTo(Driver::class, 'second_driver_id');
+    // }
 
-    public function third_driver() {
-        return $this->belongsTo(Driver::class, 'third_driver_id');
-    }
+    // public function third_driver() {
+    //     return $this->belongsTo(Driver::class, 'third_driver_id');
+    // }
 }

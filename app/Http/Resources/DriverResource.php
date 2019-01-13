@@ -16,14 +16,13 @@ class DriverResource extends JsonResource
     {
         return[
             'id' => $this->id,
+            'username' => $this->username,
             'phonenumber' => $this->phonenumber,
             'lat' => $this->lat,
-            'long' => $this->long,
+            'long' => $this->longitude,
             'occupied' => $this->occupied,
             'location_updated' => (string) $this->location_updated,
             'updated_at' =>(string) $this->created_at,
-            'rating' => $this->rating,
-            'transcation' => $this->transcation
         ];
     }
 }

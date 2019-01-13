@@ -22,8 +22,6 @@ class TaxiResource extends JsonResource
             'driver_id' => $this->driver_id,
             'created_at' => (string) $this->created_at,
             'updated_at' =>(string) $this->created_at,
-            'occupied' => $this->occupied,
-            'password' => $this->password,
             'owner' => $this->driver_owner
         ];
     }

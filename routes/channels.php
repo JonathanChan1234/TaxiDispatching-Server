@@ -23,3 +23,7 @@ Broadcast::channel('notification', function ($user, $id) {
 Broadcast::channel('driverFound', function($user, $id) {
     return true;
 });
+
+Broadcast::channel('qrcodeRefresh', function($user, $id) {
+    return true;
+});

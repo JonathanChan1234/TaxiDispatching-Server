@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Validator;
 use App\User;
 use App\Http\Resources\UserResource;
 use Config;
+use Illuminate\Database\Eloquent\ModelNotFoundException; 
 
 class UserController extends Controller
 {   
@@ -31,7 +32,6 @@ class UserController extends Controller
             'phonenumber'=>$request->phonenumber,
         ]);
         $phonenumber = $request->phonenumber;
-        // fail to upload file (??)
         if($request->hasFile('profileImg')) {
             if ($request->file('profileImg')->isValid()) {
                 $path = $request->file('profileImg')->storeAs('public/userProfileImg', $phonenumber.'.jpg');
