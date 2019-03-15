@@ -10,6 +10,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 
 use App\Transcation;
 use App\Driver;
+use App\Events\DriverNotificationEvent;
 
 /**
  * Timeout event 
@@ -48,6 +49,7 @@ class PassengerTimeoutJob implements ShouldQueue
             $this->driver->occupied = 0;
             $this->driver->transcation_id = 0;
             $this->driver->save();
+            event(new DriverNotificationEvent($this->driver, $this->transcation, "PassengerTimeout"));
         }
     }
 }

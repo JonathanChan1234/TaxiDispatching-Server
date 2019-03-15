@@ -8,7 +8,7 @@ use App\Driver;
 class Taxi extends Model
 {
     protected $fillable = [
-        'platenumber', 'occupied', 'password', 'owner'
+        'platenumber', 'occupied', 'password', 'owner', 'accessToken'
     ];
 
     public function driver() {

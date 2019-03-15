@@ -6,13 +6,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Driver;
 use App\Http\Resources\DriverResource;
-use Illuminate\Database\Eloquent\ModelNotFoundException;  
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use \base64;
 
 class DriverController extends Controller
 {
     public function __construct()
     {
-      $this->middleware('auth:driver-api')->except(['register', 'login', 'respondWithToken', 'verifyPassword']);
+      $this->middleware('auth:driver-api')->except(['register', 'login', 'respondWithToken', 'verifyPassword', 'setOccupied', 'resetDriver']);
     }
 
     public function register(Request $request) {
@@ -22,36 +23,52 @@ class DriverController extends Controller
             'phonenumber' => 'required|unique:drivers'
         ]);
         if($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return response()->json([
+                'user' => NULL,
+                'success' => 0,
+                'access_token' => NULL,
+                "token_type"=> NULL,
+                'expires_in' => NULL,
+                'message' => $validator->errors()->all()
+            ], 200);
         }
         $driver = Driver::create([
             'username'=> $request->username,
             'email'=> $request->email,
             'password'=> bcrypt($request->password),
-            'phonenumber'=>$request->phonenumber,
-            'occupied'=>0,
+            'phonenumber'=> $request->phonenumber,
+            'occupied' => 0,
         ]);
-        if($request->hasFile('profileImg')) {
-            if ($request->file('profileImg')->isValid()) {
-                $path = $request->file('profileImg')->storeAs('public/driverProfileImg', $phonenumber.'.jpg');
-            }
+        if($request->img != "") {
+            $url = storage_path()."\\app\public\driverProfileImg\\". $request->phonenumber.'.png';
+            file_put_contents($url, base64_decode($request->img));
         }
         $token = auth()->login($driver);
-        return $this->respondWithToken($token);
+        return $this->respondWithToken($token, $driver);
     }
     public function login(Request $request) {
         $credentials = $request->only(['phonenumber','password']);
         if(!$token = auth('driver-api')->attempt($credentials)) {
             return response()->json([
-                'error'=>"Unauthorized",
-                'success' => 0], 201);
+                'user' => NULL,
+                'success' => 0,
+                'access_token' => NULL,
+                "token_type"=> NULL,
+                'expires_in' => NULL,
+                'message' => ["Incorrect Password"]
+            ], 200);
         }
         try {
             $driver = Driver::where('phonenumber', '=', $request->phonenumber)->firstorFail();;
         } catch(ModelNotFoundException $e) {
             return response()->json([
+                'user' => NULL,
                 'success' => 0,
-                'error' => "Username not found"]);
+                'access_token' => NULL,
+                "token_type"=> NULL,
+                'expires_in' => NULL,
+                'message' => ["Account not found"]
+            ], 200);
         }
         return $this->respondWithToken($token, $driver);
     }
@@ -59,10 +76,11 @@ class DriverController extends Controller
     protected function respondWithToken($token, $driver) {
         return response()->json([
             'success' => 1,
-            'username' => $driver->username,
+            'user' => $driver,
             'access_token' => $token,
             "token_type"=> 'bearer', 
-            'expires_in' => auth()->factory()->getTTL()*60
+            'expires_in' => auth()->factory()->getTTL()*60,
+            'message' => []
         ]);
     }
 
@@ -78,15 +96,48 @@ class DriverController extends Controller
         } catch(ModelNotFoundException $e) {
             return response()->json([
                 'success' => 0,
-                'error' => "User not found"]);
+                'message' => "User not found"]);
         }
         if(password_verify($request->password, $driver->password)) {
             return response()->json([
                 'success' => 1,
-                'error' => "Correct"]);
+                'message' => "Correct"]);
         } 
         return response()->json([
             'success' => 0,
-            'error' => "Incorrect password"]);
+            'message' => "Incorrect password"]);
+    }
+
+    public function setOccupied(Request $request) {
+        try {
+            $driver = Driver::where('id', '=', $request->id)->firstorFail();
+        } catch(ModelNotFoundException $e) {
+            return response()->json([
+                'success' => 0,
+                'message' => "User not found"]);
+        }
+
+        if($request->occupied == 0) {
+            $driver->occupied = 1;
+            $driver->save();
+            return response()->json([
+                'success' => 1,
+                'message' => "occupied"
+            ]);
+        } else {
+            $driver->occupied = 0;
+            $driver->save();
+            return response()->json([
+                'success' => 1,
+                'message' => "unoccupied"]);
+        }
+    }
+
+    public function resetDriver(Request $request) {
+        $drivers = Driver::all();
+        foreach($drivers as $driver) {
+            $driver->occupied = 0;
+            $driver->save();
+        };
     }
 }

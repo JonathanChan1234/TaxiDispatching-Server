@@ -42,10 +42,10 @@ class TransactionProcessor implements ShouldQueue
     public function handle()
     {
         //If the status is 400 (cancel)
-        if($this->transcation->id != 400) {
+        if($this->transcation->status != 400) {
             Log::Info("Handle transaction ". $this->transcation->id);
             //Retrieve all the available drivers (which they have logged in a taxi account)
-            $drivers = Driver::where([['occupied', 0], ['taxi_id', '=', '0']])->get();
+            $drivers = Driver::where('occupied', 0)->get();
             // Iterate every available drivers
             $drivers->each(function ($item, $key) {
                 if(Redis::hexists($item->id, "latitude")) {
@@ -69,6 +69,7 @@ class TransactionProcessor implements ShouldQueue
                         // Update the status of the selected driver
                         $item->occupied = 1;
                         $item->transcation_id = $this->transcation->id;
+                        $item->transcation_type = 'p';
                         $eligible_drivers = $item;
                         $item->save();
     

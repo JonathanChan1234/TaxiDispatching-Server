@@ -19,7 +19,7 @@ class Driver extends Authenticatable implements JWTSubject
     ];
 
     protected $hidden = [
-        'password', 'email'
+        'password'
     ];
     
     public function taxi() {

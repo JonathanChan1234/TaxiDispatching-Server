@@ -1,29 +1,25 @@
 <?php
 
 namespace App\Jobs;
-use Illuminate\Support\Facades\Log;
+
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 
-use App\Transcation;
-
-class SleepTask implements ShouldQueue
+class DriverReachPickupJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-    protected $transcation;
-    
+
     /**
      * Create a new job instance.
      *
      * @return void
      */
-    public function __construct(Transcation $transcation)
+    public function __construct()
     {
-        Log::info("Job constructured");
-        $this->transcation = $transcation;
+        //
     }
 
     /**
@@ -33,8 +29,6 @@ class SleepTask implements ShouldQueue
      */
     public function handle()
     {
-        Log::info("Job handled");
-        sleep(5);
-        Log::info("Job finished");
+        //
     }
 }

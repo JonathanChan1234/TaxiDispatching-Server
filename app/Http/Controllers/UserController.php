@@ -23,7 +23,18 @@ class UserController extends Controller
             'phonenumber' => 'required|unique:users'
         ]);
         if($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return response()->json([
+                'user' => NULL,
+                'success' => 0,
+                'access_token' => NULL,
+                "token_type"=> NULL,
+                'expires_in' => NULL,
+                'message' => $validator->errors()->all()
+            ], 200);
+        }
+        if($request->img != "") {
+            $url = storage_path()."\\app\public\userProfileImg\\". $request->phonenumber.'.png';
+            file_put_contents($url, base64_decode($request->img));
         }
         $user = User::create([
             'username'=> $request->username,
@@ -31,12 +42,6 @@ class UserController extends Controller
             'password'=> bcrypt($request->password),
             'phonenumber'=>$request->phonenumber,
         ]);
-        $phonenumber = $request->phonenumber;
-        if($request->hasFile('profileImg')) {
-            if ($request->file('profileImg')->isValid()) {
-                $path = $request->file('profileImg')->storeAs('public/userProfileImg', $phonenumber.'.jpg');
-            }
-        }
         $token = auth()->login($user);
         return $this->respondWithToken($token, $user);
     }
@@ -46,15 +51,26 @@ class UserController extends Controller
         // Config::set('jwt.user', 'App\User'); 
         // Config::set('auth.providers.users.model', \App\User::class);
         if(!$token = auth()->attempt($credentials)) {
-            return response()->json(['error'=>"Unauthorized",
-                                    'success' => 0],201);
+            return response()->json([
+                'user' => NULL,
+                'success' => 0,
+                'access_token' => NULL,
+                "token_type"=> NULL,
+                'expires_in' => NULL,
+                'message' => ["Incorrect Password"]
+            ], 200);
         }
         try {
             $user = User::where('phonenumber', '=', $request->phonenumber)->firstorFail();
         } catch(ModelNotFoundException $e) {
             return response()->json([
+                'user' => NULL,
                 'success' => 0,
-                'error' => "Username not found"], 200);
+                'access_token' => NULL,
+                "token_type"=> NULL,
+                'expires_in' => NULL,
+                'message' => ["Account not found"]
+            ], 200);
         }
         return $this->respondWithToken($token, $user);
     }
@@ -65,7 +81,8 @@ class UserController extends Controller
             'success' => 1,
             'access_token' => $token,
             "token_type"=> 'bearer',
-            'expires_in' => auth()->factory()->getTTL()*1000
+            'expires_in' => auth()->factory()->getTTL()*1000,
+            'message' => []
         ]);
     }
 

@@ -23,6 +23,7 @@ class DriverResource extends JsonResource
             'occupied' => $this->occupied,
             'location_updated' => (string) $this->location_updated,
             'updated_at' =>(string) $this->created_at,
+            'taxi' => $this->taxi
         ];
     }
 }

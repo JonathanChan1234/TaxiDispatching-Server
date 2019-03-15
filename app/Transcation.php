@@ -8,7 +8,7 @@ class Transcation extends Model
 {   
     protected $fillable = ['user_id', 'start_lat', 'start_long',
                             'start_addr', 'des_lat', 'des_long',
-                            'des_addr', 'status'];
+                            'des_addr', 'status', 'type', 'cancelled'];
 
     // dynamic scope to check the current transcation of the user
     public function scopeOfUserCurrentTranscation($query, $user_id) {
@@ -30,15 +30,7 @@ class Transcation extends Model
         return $this->belongsTo(Driver::class, "driver_id");
     }
 
-    // public function first_driver() {
-    //     return $this->belongsTo(Driver::class, 'first_driver_id');
-    // }
-
-    // public function second_driver() {
-    //     return $this->belongsTo(Driver::class, 'second_driver_id');
-    // }
-
-    // public function third_driver() {
-    //     return $this->belongsTo(Driver::class, 'third_driver_id');
-    // }
+    public function taxi() {
+        return $this->belongsTo(Taxi::class, "taxi");
+    }
 }

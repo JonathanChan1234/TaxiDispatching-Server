@@ -24,6 +24,14 @@ Broadcast::channel('driverFound', function($user, $id) {
     return true;
 });
 
+Broadcast::channel('driverNotification', function($user, $id) {
+    return true;
+});
+
+Broadcast::channel('passengerNotification', function($user, $id) {
+    return true;
+});
+
 Broadcast::channel('qrcodeRefresh', function($user, $id) {
     return true;
 });

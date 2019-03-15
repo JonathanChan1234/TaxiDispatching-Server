@@ -2,6 +2,10 @@
 
 namespace App\Events;
 
+use App\Driver;
+use App\Transcation;
+use App\Http\Resources\DriverResource;
+use App\Http\Resources\TranscationResource;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Broadcasting\PrivateChannel;
@@ -9,26 +13,27 @@ use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
-use Illuminate\Support\Facades\Log;
-use App\User;
 
-class PushNotification implements ShouldBroadcast
+/**
+ * This event is called when the driver reached the pick-up point
+ * The passenger has to reach within the 5 mins
+ */
+class PassengerDriverReachEvent
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
-    public $token, $message;
-    public $data;
+    public $driver, $transcation, $event, $time;
 
     /**
      * Create a new event instance.
      *
      * @return void
      */
-    public function __construct()
+    public function __construct(Driver $driverObject, Transcation $transcation, $time) 
     {
-        Log::info("Broadcast event");
-        $this->data = array(
-            'power'=> '10'
-        );
+        $this->driver = new DriverResource($driverObject);
+        $this->transcation = new TranscationResource($transcation);
+        $this->time = $time;
+        $this->event = "passengerDriverReach";
     }
 
     /**
@@ -38,8 +43,6 @@ class PushNotification implements ShouldBroadcast
      */
     public function broadcastOn()
     {
-        return new Channel('notification');
-        // return ['notification'];
-        // return new PrivateChannel('channel-name');
+        return new Channel('passengerNotification');
     }
 }
