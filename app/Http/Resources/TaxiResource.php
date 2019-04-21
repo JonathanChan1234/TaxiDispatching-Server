@@ -16,7 +16,7 @@ class TaxiResource extends JsonResource
     {
         return[
             'id' => $this->id,
-            'platenumber' => $this->plateNumber,
+            'plateNumber' => $this->plateNumber,
             'last_login_time' => $this->last_login_time,
             'last_logout_time' => $this->last_logout_time,
             'driver_id' => $this->driver_id,

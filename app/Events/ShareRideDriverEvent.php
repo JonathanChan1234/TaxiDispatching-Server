@@ -13,17 +13,18 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 class ShareRideDriverEvent implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
-    public $driver, $shareRideTranscation, $event;
+    public $driver, $shareRideTranscation, $time, $event;
 
     /**
      * Create a new event instance.
      *
      * @return void
      */
-    public function __construct($shareTranscation, $driver, $event)
+    public function __construct($shareTranscation, $driver, $t, $event)
     {
         $this->driver = $driver;
         $this->shareRideTranscation = $shareTranscation;
+        $this->time = $t;
         $this->event = $event;
     }
 

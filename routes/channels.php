@@ -15,7 +15,6 @@ Broadcast::channel('App.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
-
 Broadcast::channel('notification', function ($user, $id) {
     return true;
 });
@@ -33,5 +32,9 @@ Broadcast::channel('passengerNotification', function($user, $id) {
 });
 
 Broadcast::channel('qrcodeRefresh', function($user, $id) {
+    return true;
+});
+
+Broadcast::channel('admin', function($user, $id) {
     return true;
 });

@@ -23,17 +23,19 @@ class DriverFoundEvent implements ShouldBroadcast
     protected $transcation;
     public $driverResource;
     public $transcationResource;
+    public $time;
     /**
      * Create a new event instance.
      *
      * @return void
      */
-    public function __construct(Driver $driver, Transcation $transcation)
+    public function __construct(Driver $driver, Transcation $transcation, $time)
     {
         $this->driver = $driver;
         $this->transcation = $transcation;
         $this->driverResource = new DriverResource($driver);
         $this->transcationResource = new TranscationResource($transcation);
+        $this->time = $time;
     }
 
     /**

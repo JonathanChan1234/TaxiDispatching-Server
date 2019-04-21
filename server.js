@@ -9,11 +9,6 @@ var redis = new Redis() //subscribe channel
 var pub = new Redis() //publish channel
 var cache = new Redis() //cache channel
 
-var driver_room = new Array();
-var transaction_room = new Array();
-var passengerMessage = new Array();
-var qrcode_room = new Array();
-
 //Call when there is someone connected to the server
 io.sockets.on('connection', (socket) => {
     console.log('new user connected')
@@ -28,46 +23,30 @@ io.sockets.on('connection', (socket) => {
                     socket.join([`driver:${user.id}`, 'location'], () => {
                         findClientsSocket(null, null)
                     })
-                    driver_room.push(`driver:${user.id}`)
-
-                    /**
-                     * When the driver "join" (connect/reconnect) 
-                     * send the missing data to them
-                     */
                     checkMissingMessage(`driver:${user.id}`)
-
-                    cache.lpush(`driver:${user.id}`, JSON.stringify({ event: "joinResponse", data: { message: 'hello' } }))
-                    socket.emit("joinResponse", { message: "hello" })
                 }
                 break;
             case 'passenger':
                 console.log(`passenger ${user.id} join the socket server`)
-                if (user.objective == "transcation") {
-                    console.log(`passenger ${user.id} joins room transcation:${user.transcationid}`)
-                    socket.join(`transcation:${user.transcationid}`, () => {
-                        findClientsSocket(null, null)
-                    })
-                    transaction_room.push(`transcation:${user.transcationid}`)
-                    /**
-                     * When the passenger "join" (connect/reconnect) 
-                     * send the missing data to them
-                     */
-                    if (cache.llen(`transcation:${user.transcationid}`) > 0) {
-                        for (let i = 0; i < cache.llen(`transcation:${user.transcationid}`) > 0; ++i) {
-                            let message = JSON.parse(cache.lindex(`transcation:${user.transcationid}`, i));
-                            socket.broadcast.in(`transcation:${user.transcationid}`).emit(message.event, { transcation: message.transcation, driver: message.driver })
-                        }
-                    }
-                }
+                console.log(`passenger ${user.id} joins room transcation:${user.transcationid}`)
+                socket.join(`transcation:${user.transcationid}`, () => {
+                    findClientsSocket(null, null)
+                })
+                socket.join(`passenger:${user.id}`, () => {
+                    findClientsSocket(null, null)
+                })
+                checkMissingMessage(`passenger:${user.id}`)
+                checkMissingMessage(`transcation:${user.transcationid}`)
                 break;
             case 'QRCode':
                 console.log(`QR code ${user.platenumber}`)
                 socket.join(`qrcode:${user.platenumber}`)
-                qrcode_room.push(`qrcode:${user.platenumber}`)
                 break;
             case 'admin':
                 console.log('admin join the server')
-                socket.join('admin')
+                socket.join('admin', () => {
+                    findClientsSocket(null, null)
+                })
                 break;
             default:
                 break;
@@ -92,21 +71,6 @@ io.sockets.on('connection', (socket) => {
     // {response: 0/1, transcation: id, driver: id}
     socket.on("driverFoundResponse", (data) => {
         if (data) {
-            // Clear cached message
-            cache.llen(`transcation:${data.transcationid}`).then(function (length) {
-                if (length > 0) {
-                    for (let i = 0; i < length; ++i) {
-                        // Set the item with "driverFound" event to "delete"
-                        cache.lindex(`transcation:${data.transcationid}`, i).then((redisMessage) => {
-                            let message = JSON.parse(redisMessage)
-                            if (message.event == "driverFound") {
-                                cache.lset(`transcation:${data.transcationid}`, i, "delete")
-                            }
-                        })
-                    }
-                    cache.lrem(`transcation:${data.transcationid}`, 0, "delete")
-                }
-            })
             console.log(data)
             var message = {};
             if (data.response == 1) {
@@ -126,41 +90,24 @@ io.sockets.on('connection', (socket) => {
         }
     })
 
-    //Callback (from the driver)
+    //Response (from the driver)
     //data: {response: 0/1, transcation: transcation, driver: driver}
     socket.on("passengerFoundResponse", (data) => {
         if (data) {
             console.log("Passenger Found Response")
             console.log(data)
-            // client successfully receive message from server
-            // remove the pending message from Redis
-            cache.llen(`driver:${data.driver.id}`).then((length) => {
-                console.log(length)
-                for (let i = 0; i < length; ++i) {
-                    cache.lindex(`driver:${data.driver.id}`, i).then((redisMessage) => {
-                        try {
-                            let message = JSON.parse(redisMessage)
-                            if (message.event == "passengerFound" && message.event) {
-                                cache.lset(`driver:${data.driver.id}`, i, "delete")
-                            }
-                        } catch (e) {
-                        }
-                    })
-                }
-                cache.lrem(`driver:${data.driver.id}`, 0, "delete")
-            })
-
             // The driver accept the order and send the request to the passenger
             if (data.response == 1) {
                 console.log("Driver accepted the offer")
-                pub.publish('driverResponse', JSON.stringify({ response: 1, transcation: data.transcation.id, driver: data.driver.id }))
-                io.in('admin').emit('passengerFoundResponse', { response: 1, transcation: data.transcation.id, driver: data.driver.id })
+                console.log(JSON.stringify({ response: 1, transcation: data.transcation, driver: data.driver }))
+                pub.publish('driverResponse', JSON.stringify({ response: 1, transcation: data.transcation, driver: data.driver }))
+                io.in('admin').emit('passengerFoundResponse', { response: 1, transcation: data.transcation, driver: data.driver })
             } else {
                 // publish the redis "transcation" channel
                 // restart the searching process again
                 console.log("Driver reject the offer")
-                pub.publish('driverResponse', JSON.stringify({ response: 0, transcation: data.transcation.id, driver: data.driver.id }))
-                io.in('admin').emit('passengerFoundResponse', { response: 0, transcation: data.transcation.id, driver: data.driver.id })
+                pub.publish('driverResponse', JSON.stringify({ response: 0, transcation: data.transcation, driver: data.driver }))
+                io.in('admin').emit('passengerFoundResponse', { response: 0, transcation: data.transcation, driver: data.driver })
             }
         }
     })
@@ -177,18 +124,9 @@ io.sockets.on('connection', (socket) => {
         }
     })
 
-    socket.on("joinTranscation", (data) => {
-        console.log("Join transcation")
-        console.log(data)
-        //join the driver room and transaction room    
-        socket.join([`driver:${data.driver}`, `transcation:${data.transcation}`])
-        //Driver and passengers are free to communicate now
-    })
-
     socket.on("locationUpdateToPassenger", (data) => {
-        io.in(`transcation:${data.passenger}`).emit("locationUpdate", data.pack)
+        io.in(`${data.key}`).emit("locationUpdate", data.pack)
     })
-
 
     /**
      * Share ride 
@@ -196,16 +134,8 @@ io.sockets.on('connection', (socket) => {
      * data:{response: 0/1, transcation: transcationID, driver: driverID}
      */
     socket.on('shareRideDriverResponse', (data) => {
+        console.log('shareRideDriverResponse')
         console.log(data)
-        let driverKey = `driver:${data.driver}`
-        removeMessageCache(driverKey, "shareRideDriverFound")
-        // if the driver accepted the call
-        // if(data.response == 1) {
-        //     let passenger1Key = `transcation:${data.shareRideTranscation.first_transaction.id}`
-        //     let passenger2Key = `transcation:${data.shareRideTranscation.second_transaction.id}`
-        //     socket.broadcast.in(passenger1Key).emit("shareRidePairingSuccess", {driver: data.driver, transcation: data.shareRideTranscation});
-        //     socket.broadcast.in(passenger2Key).emit("shareRidePairingSuccess", {driver: data.driver, transcation: data.shareRideTranscation});
-        // }
         //update the status of the transaction in the database
         pub.publish('shareRideDriverResponse', JSON.stringify({
             response: data.response,
@@ -214,19 +144,18 @@ io.sockets.on('connection', (socket) => {
         }))
     })
 
-    /**
-     * Share ride
-     * Driver accept the call
-     * Passengers have to confirm the deal
-     * data: {response: 1/0, transaction: shareTransactionID}
-     */
-    socket.on('shareRidePassengerResponse', (data) => {
+    socket.on("getDriverLocation", function (data, fn) {
         console.log(data)
-        pub.publish('shareRidePassengerResponse', JSON.stringify({
-            response: data.response,
-            transcation: data.transcation,
-            shareRideTranscation: data.shareRideTranscation
-        }))
+        cache.hgetall(data.driver, function (err, res) {
+            console.log(res)
+            if(res) {
+                fn({
+                    latitude: res.latitude, 
+                    longitude: res.longitude,
+                    timestamp: res.timestamp
+                })
+            }
+        })
     })
 
     socket.on("disconnect", () => {
@@ -243,7 +172,34 @@ function checkMissingMessage(key) {
                     if (redisMessage != "delete") {
                         try {
                             let message = JSON.parse(redisMessage)
-                            io.in(key).emit(message.event, { message: message.data })
+                            switch (message.event) {
+                                case "passengerFound": //To driver
+                                    io.in(key).emit(message.event, {
+                                        transcation: message.transcation,
+                                        driver: message.driver,
+                                        time: message.time
+                                    })
+                                    break;
+                                case "shareRidePairingSuccess": // To passenger
+                                    io.in(key).emit(message.event,
+                                        {
+                                            first_transcation: message.first_transcation,
+                                            second_transcation: message.second_transcation
+                                        })
+                                    break;
+                                case "PassengerTimeout": // To driver
+                                    io.in(key).emit(message.event, {
+                                        transcation: message.data.transcation,
+                                        driver: message.data.driver
+                                    })
+                                    break;
+                                case "shareRideDriverReach":// to passenger
+                                    io.in(key).emit("shareRideDriverReach", {
+                                        time: message.time,
+                                        transcation: message.transcation
+                                    })
+                                    break;
+                            }
                         } catch (e) {
                             console.log(e)
                         }
@@ -286,6 +242,7 @@ function saveMessageInCache(key, event, message) {
 function findClientsSocket(roomId, namespace) {
     var res = []
     var ns = io.of(namespace || '')
+    console.log("----------------Session-------------")
     if (ns) {
         for (var id in ns.connected) {
             if (roomId) {
@@ -294,16 +251,21 @@ function findClientsSocket(roomId, namespace) {
                     res.push(ns.connected[id])
                 }
             } else {
-                res.push(ns.connected[id])
                 let rooms = Object.keys(ns.connected[id].rooms);
-                console.log(rooms)
+                rooms.forEach(room => {
+                    console.log(room)
+                    if (room.indexOf('driver') !== -1) {
+                        res.push(room)
+                    }
+                })
             }
         }
     }
+    io.in('admin').emit("onlineUserUpdate", { data: res });
     return res;
 }
 
-redis.subscribe('driverFound', 'driverNotification', 'qrcodeRefresh', 'passengerNotification', function (err, count) {
+redis.subscribe('driverFound', 'driverNotification', 'qrcodeRefresh', 'passengerNotification', 'admin', function (err, count) {
     if (err) console.log(err)
 })
 
@@ -312,13 +274,54 @@ redis.on('message', function (channel, message) {
     console.log(`Message received: ${message}`)
     if (message) {
         switch (channel) {
+            case 'admin':
+                switch (JSON.parse(message).data.event) {
+                    case "transactionUpdate":
+                        io.in('admin').emit("transactionUpdate", { transaction: JSON.parse(message).data.transcation })
+                        break;
+                    case 'driverComparison':
+                        io.in('admin').emit('driverComparison', {
+                            transaction: JSON.parse(message).data.transcation,
+                            drivers: JSON.parse(message).data.driver
+                        })
+                        break;
+                    case 'shareRide':
+                        console.log('shareRide')
+                        io.in('admin').emit('shareRideUpdate', {
+                            event: 'shareRide'
+                        })
+                        break;
+                    case 'shareRideTransaction':
+                        console.log('shareRideTransaction')
+                        io.in('admin').emit('shareRideUpdate', {
+                            event: 'shareRideTransaction'
+                        })
+                        break;
+                    default:
+                        break;
+                }
+
+                break;
             case 'driverFound':
-                var dataPack = JSON.parse(message)
-                let driverRoom = `driver:${dataPack.data.driverResource.id}`
+                var dataPack = JSON.parse(message).data
+                let driverRoom = `driver:${dataPack.driverResource.id}`
                 // Send the transaction data to the drivers
-                io.in(driverRoom).emit('passengerFound', { transcation: dataPack.data.transcationResource, driver: dataPack.data.driverResource })
-                io.in('admin').emit('passengerFound', { transcation: dataPack.data.transcationResource, driver: dataPack.data.driverResource })
-                cache.lpush(driverRoom, JSON.stringify({ event: "passengerFound", transcation: dataPack.data.transcationResource, driver: dataPack.data.driverResource }))
+                io.in(driverRoom).emit('passengerFound', {
+                    time: dataPack.time,
+                    transcation: dataPack.transcationResource,
+                    driver: dataPack.driverResource
+                })
+                io.in('admin').emit('passengerFound', {
+                    time: dataPack.time,
+                    transcation: dataPack.transcationResource,
+                    driver: dataPack.driverResource
+                })
+                cache.lpush(driverRoom, JSON.stringify({
+                    event: "passengerFound",
+                    time: dataPack.time,
+                    transcation: dataPack.transcationResource,
+                    driver: dataPack.driverResource
+                }))
                 break;
 
             case 'passengerNotification':   //Push notification to passenger
@@ -327,23 +330,32 @@ redis.on('message', function (channel, message) {
                 switch (passengerData.event) {
                     case 'passengerDriverFound': // Passenger Personal Ride Driver found event
                         console.log('passengerDriverFound')
-                        let transactionRoom = `transcation:${passengerData.transactionResource.id}`
+                        let passengerRoom = `passenger:${passengerData.transcationResource.user.id}`
                         // Send message to passenger
-                        io.in(transactionRoom).emit(passengerData.event,
-                            { transcation: passengerData.transcationResource, driver: passengerData.driverResource })
+                        io.in(passengerRoom).emit(passengerData.event, {
+                            transcation: passengerData.transcationResource,
+                            driver: passengerData.driverResource,
+                            time: passengerData.time
+                        })
                         // Save the message in case the passenger cannot receive
-                        cache.lpush(transactionRoom,
-                            JSON.stringify({ event: "driverFound", transcation: passengerData.transcationResource, driver: passengerData.driverResource }))
+                        cache.lpush(passengerRoom,
+                            JSON.stringify({
+                                event: "passengerDriverFound",
+                                transcation: passengerData.transcationResource,
+                                driver: passengerData.driverResource,
+                                time: passengerData.time
+                            }))
                         break;
+
                     case 'passengerDriverReach': // Personal Ride: driver reach the pick-up point
                         console.log('passengerDriverReach')
-                        io.in(`transcation:${passengerData.transcation.id}`)
+                        io.in(`passenger:${passengerData.transcation.user.id}`)
                             .emit('passengerDriverReach', {
                                 transcation: passengerData.transcation,
                                 driver: passengerData.driver,
                                 time: passengerData.time
                             })
-                        cache.lpush(`transcation:${passengerData.transcation.id}`,
+                        cache.lpush(`passenger:${passengerData.transcation.id}`,
                             JSON.stringify({
                                 event: "passengerDriverReach",
                                 transcation: passengerData.transcation,
@@ -351,17 +363,40 @@ redis.on('message', function (channel, message) {
                                 time: passengerData.time
                             }))
                         break;
-                    case 'passengerShareRideFound': // Passenger Share Ride Driver found event
-                        let first_transaction = passengerData.shareRideTranscation.first_transaction.id
-                        let second_transaction = passengerData.shareRideTranscation.second_transaction.id
-                        io.in(`transcation:${first_transaction}`)
-                            .emit('shareRidePairingSuccess', { transcation: passengerData.shareRideTranscation, driver: passengerData.driver })
-                        io.in(`transcation:${second_transaction}`)
-                            .emit('shareRidePairingSuccess', { transcation: passengerData.shareRideTranscation, driver: passengerData.driver })
-                        cache.lpush(`transcation:${first_transaction}`,
-                            JSON.stringify({ event: 'shareRidePairingSuccess', transcation: passengerData.shareRideTranscation, driver: passengerData.driver }))
-                        cache.lpush(`transcation:${second_transaction}`,
-                            JSON.stringify({ event: 'shareRidePairingSuccess', transcation: passengerData.shareRideTranscation, driver: passengerData.driver }))
+
+                    case "shareRidePairingSuccess": // From ShareRidePassengerEvent.php
+                        let first_passenger = passengerData.shareRideTranscation.first_transaction.user.id
+                        let second_passenger = passengerData.shareRideTranscation.second_transaction.user.id
+                        console.log(first_passenger)
+                        console.log(second_passenger)
+                        io.in(`passenger:${first_passenger}`).emit('shareRidePairingSuccess', {
+                            transcation: passengerData.shareRideTranscation
+                        })
+                        io.in(`passenger:${second_passenger}`).emit('shareRidePairingSuccess', {
+                            transcation: passengerData.shareRideTranscation
+                        })
+                        cache.lpush(`passenger:${second_passenger}`,
+                            JSON.stringify({
+                                event: 'shareRidePairingSuccess',
+                                transcation: passengerData.shareRideTranscation
+                            }))
+                        cache.lpush(`passenger:${first_passenger}`,
+                            JSON.stringify({
+                                event: 'shareRidePairingSuccess',
+                                transcation: passengerData.shareRideTranscation
+                            }))
+                        break;
+
+                    case "shareRideDriverReach":
+                        io.in(`passenger:${passengerData.passengerId}`).emit("shareRideDriverReach", {
+                            transcation: passengerData.transcation,
+                            time: passengerData.time
+                        })
+                        cache.lpush(`passenger:${passengerData.passengerId}`, JSON.stringify({
+                            event: "shareRideDriverReach",
+                            transcation: passengerData.transcation,
+                            time: passengerData.time
+                        }))
                         break;
                 }
                 break;
@@ -374,17 +409,31 @@ redis.on('message', function (channel, message) {
             case 'driverNotification':  //Push notification to driver
                 let driverData = JSON.parse(message).data
                 switch (driverData.event) {
+                    case "cancelRide":
+                        io.in(`driver:${driverData.driver.id}`).emit("cancelRide", { transcation: driverData.transcation })
                     case "PassengerTimeout":
                         let driverKey = `driver:${driverData.driverResource.id}`
                         io.in(driverKey).emit(driverData.event, { data: driverData.transactionResource })
                         cache.lpush(driverKey, JSON.stringify({ event: driverData.event, data: driverData.transactionResource }))
                         break;
-                    case "shareRideDriverFound":
+                    case "shareRideDriverFound": //Share Ride -> Driver
+                        console.log("shareRideDriverFound")
                         let driverRoom = `driver:${driverData.driver.id}`;
-                        io.in(driverRoom).emit("shareRideDriverFound",
-                            { transcation: driverData.shareRideTranscation, driver: driverData.driver })
+                        io.in(driverRoom).emit("shareRideDriverFound", {
+                            transcation: driverData.shareRideTranscation,
+                            driver: driverData.driver,
+                            time: driverData.time
+                        })
                         cache.lpush(driverRoom, JSON.stringify({ event: "shareRideDriverFound", data: driverData.shareRideTranscation }))
                         break;
+                    case "transcationInvitation":
+                        console.log("transactionInvitation");
+                        let key = `driver:${driverData.driver.id}`
+                        io.in(key).emit("transcationInvitation", {
+                            driver: driverData.driver,
+                            transcation: driverData.transcation,
+                            response: driverData.response
+                        })
                     default:
                         break;
                 }

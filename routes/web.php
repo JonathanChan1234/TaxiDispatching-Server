@@ -25,4 +25,3 @@ Route::get('/fire', function () {
     return "event fired";
 });
 
-

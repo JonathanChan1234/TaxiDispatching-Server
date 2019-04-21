@@ -21,7 +21,8 @@ class PassengerNotificationEvent implements ShouldBroadcast
     protected $driver;
     protected $transaction;
     public $driverResource;
-    public $transactionResource;
+    public $transcationResource;
+    public $time;
     public $event;
 
     /**
@@ -29,12 +30,13 @@ class PassengerNotificationEvent implements ShouldBroadcast
      *
      * @return void
      */
-    public function __construct(Driver $driver, Transcation $transaction, $event)
+    public function __construct(Driver $driver, Transcation $transaction, $time, $event)
     {
         $this->driver = $driver;
         $this->driverResource = new DriverResource($driver);
         $this->transaction = $transaction;
-        $this->transactionResource = new TranscationResource($transaction);
+        $this->transcationResource = new TranscationResource($transaction);
+        $this->time = $time;
         $this->event = $event;
     }
 

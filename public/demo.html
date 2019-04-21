@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>FYP Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+    <script src='http://localhost:3000/socket.io/socket.io.js'></script>
+    <script src='http://code.jquery.com/jquery-1.8.2.min.js'></script>
+    <script src='main.js'></script>
+</head>
+
+<body>
+    <div id='container'>
+        <div id="map"></div>
+        <div id='table-container'>
+            <table id='table'>
+                <tr>
+                    <th>Available Driver ID</th>
+                    <th>Available Driver Username</th>
+                    <th>Position</th>
+                </tr>
+            </table>
+    
+            <table id='transactionTable'>
+                <tr>
+                    <th>Transaction ID</th>
+                    <th>Pick-up Point</th>
+                    <th>Destination Point</th>
+                </tr>
+            </table>
+    
+            <button id='resetButton'>Reset All drivers</button>
+        </div>
+        <div id='eventList'>
+        </div>
+        <table id='onlineDriverTable'>
+            <tr>
+                <th>Online Driver</th>
+            </tr>
+        </table>
+    </div>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBwJyQDS_1ZZfic_OLFdB0q7UZC11B9vw4&callback=initMap"
+        async defer></script>
+</body>
+
+</html>

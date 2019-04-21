@@ -29,7 +29,6 @@ class TranscationResource extends JsonResource
             'meet_up_time' => $this->meet_up_time,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'type' => $this->type,
             'driverReachTime' => $this->driverReachTime
         ]; 
     }

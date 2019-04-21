@@ -8,6 +8,10 @@ socket.on('connect', () => {
     locationUpdate()
 })
 
+socket.on('test', (data) =>{
+    console.log(data)
+})
+
 socket.on('message', (data) => {
     console.log(data)
     if(data.from !== 4) {
@@ -32,6 +36,6 @@ socket.on('locationResponse', (data) => {
 
 function locationUpdate() {
     setInterval(()=> {
-        socket.emit("locationUpdate", {id:4, location: 'tai kok tsui', time:"2018-5-8"})
+        socket.emit("getLocation", {driver: 4})
     }, 2000)
 }

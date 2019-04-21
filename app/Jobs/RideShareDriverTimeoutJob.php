@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Driver;
+use App\RideShare;
 use App\RideShareTransaction;
 use App\Jobs\RideSharingProcessor;
 use Illuminate\Bus\Queueable;
@@ -39,7 +40,7 @@ class RideShareDriverTimeoutJob implements ShouldQueue
     public function handle()
     {
         // Status 102 : Driver confirm the deal and wait for confirmation
-        if ($this->sharedTransaction->status != 102) {
+        if ($this->sharedTransaction->status != 200) {
             // Restore the driver status
             $this->driver->occupied = 0;
             $this->driver->transcation_id = 0;
@@ -49,8 +50,8 @@ class RideShareDriverTimeoutJob implements ShouldQueue
             $this->sharedTransaction->status = 400;
             
             // Restore the status of the transactions
-            $first_transaction = Transcation::find($this->sharedTransaction->first_transaction);
-            $second_transaction = Transcation::find($this->sharedTransaction->second_transaction);
+            $first_transaction = RideShare::find($this->sharedTransaction->first_transaction);
+            $second_transaction = RideShare::find($this->sharedTransaction->second_transaction);
             $first_transaction->status = 100; 
             $second_transaction->status = 100;
             $first_transaction->save();

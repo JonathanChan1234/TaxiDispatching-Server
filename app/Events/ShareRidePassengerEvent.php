@@ -10,7 +10,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 
-class ShareRidePassengerEvent
+class ShareRidePassengerEvent implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
     public $shareRideTranscation, $driver, $event;
@@ -23,7 +23,6 @@ class ShareRidePassengerEvent
     public function __construct($shareRideTranscation, $driver, $event)
     {
         $this->shareRideTranscation = $shareRideTranscation;
-        $this->driver = $driver;
         $this->event = $event;
     }
 

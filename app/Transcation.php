@@ -6,9 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class Transcation extends Model
 {   
+    protected $primaryKey = 'id';
     protected $fillable = ['user_id', 'start_lat', 'start_long',
                             'start_addr', 'des_lat', 'des_long',
-                            'des_addr', 'status', 'type', 'cancelled'];
+                            'des_addr', 'status', 'cancelled'];
 
     // dynamic scope to check the current transcation of the user
     public function scopeOfUserCurrentTranscation($query, $user_id) {

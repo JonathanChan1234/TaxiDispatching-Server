@@ -1,5 +1,5 @@
 <?php
-namespace App\Services;
+namespace App\Services\FindTaxiDriver;
 
 class NoDriverFoundException extends \Exception {
 

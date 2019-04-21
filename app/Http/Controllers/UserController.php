@@ -13,7 +13,7 @@ class UserController extends Controller
 {   
     public function __construct()
     {
-      $this->middleware('auth:api')->except(['register', 'login', 'respondWithToken']);
+      $this->middleware('auth:api')->except(['register', 'login', 'respondWithToken', 'logout']);
     }
     
     public function register(Request $request) {
@@ -40,7 +40,8 @@ class UserController extends Controller
             'username'=> $request->username,
             'email'=> $request->email,
             'password'=> bcrypt($request->password),
-            'phonenumber'=>$request->phonenumber,
+            'phonenumber'=> $request->phonenumber,
+            'fcm_token' => $request->token
         ]);
         $token = auth()->login($user);
         return $this->respondWithToken($token, $user);
@@ -62,6 +63,8 @@ class UserController extends Controller
         }
         try {
             $user = User::where('phonenumber', '=', $request->phonenumber)->firstorFail();
+            $user->fcm_token = $request->token;
+            $user->save();
         } catch(ModelNotFoundException $e) {
             return response()->json([
                 'user' => NULL,
@@ -87,10 +90,20 @@ class UserController extends Controller
     }
 
     public function logout(Request $request) {
-        Config::set('jwt.user', 'App\User'); 
-		Config::set('auth.providers.users.model', \App\User::class);
-        $user = auth()->user();
-        auth()->logout();
-        return response()->json($user,200);
+        $user = User::find($request->id);
+        $user->fcm_token = '';
+        $user->save();
+        return response()->json([
+            'success' => 1,
+            'message' => 'success'
+        ]);
     }
+
+    // public function logout(Request $request) {
+    //     Config::set('jwt.user', 'App\User'); 
+	// 	Config::set('auth.providers.users.model', \App\User::class);
+    //     $user = auth()->user();
+    //     auth()->logout();
+    //     return response()->json($user,200);
+    // }
 }

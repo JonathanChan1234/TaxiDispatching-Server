@@ -3,6 +3,7 @@
 namespace App;
 
 use App\Transcation;
+use App\RideShare;
 use Illuminate\Database\Eloquent\Model;
 
 class RideShareTransaction extends Model
@@ -12,12 +13,12 @@ class RideShareTransaction extends Model
 
     public function transaction_one()
     {
-        return $this->belongsTo(Transcation::class, "first_transaction");
+        return $this->belongsTo(RideShare::class, "first_transaction");
     }
 
     public function transaction_two()
     {
-        return $this->belongsTo(Transcation::class, "second_transaction");
+        return $this->belongsTo(RideShare::class, "second_transaction");
     }
 
     public function driver()

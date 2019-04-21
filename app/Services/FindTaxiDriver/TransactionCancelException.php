@@ -1,5 +1,5 @@
 <?php
-namespace App\Services;
+namespace App\Services\FindTaxiDriver;
 
 /**
  * The transaction is cancelled by the passenger

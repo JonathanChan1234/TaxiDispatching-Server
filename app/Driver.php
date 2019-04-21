@@ -15,11 +15,11 @@ class Driver extends Authenticatable implements JWTSubject
     use Notifiable;
 
     protected $fillable = [
-        'username', 'email', 'password', 'phonenumber', 'occupied'
+        'username', 'email', 'password', 'phonenumber', 'occupied', 'fcm_token'
     ];
 
     protected $hidden = [
-        'password'
+        'password', 'fcm_token'
     ];
     
     public function taxi() {

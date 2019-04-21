@@ -149,9 +149,10 @@ class TaxiController extends Controller
                 'message' => "Taxi not found"]);
         }
         if($taxi->occupied == 1) {
+            $driver = Driver::find($taxi->driver_id);
             return response()->json([
                 'success' => 0,
-                'message' => $taxi->driver_id->username." is currently taking this taxi"
+                'message' => $driver->username." is currently taking this taxi"
             ]);
         }
         if(password_verify($request->password, $taxi->password)) {

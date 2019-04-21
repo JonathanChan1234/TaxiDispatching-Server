@@ -18,7 +18,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
  * This event is called when the driver reached the pick-up point
  * The passenger has to reach within the 5 mins
  */
-class PassengerDriverReachEvent
+class PassengerDriverReachEvent implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
     public $driver, $transcation, $event, $time;
